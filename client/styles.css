@@ -88,3 +88,11 @@ body {
   pointer-events: none;
   opacity: 0;
 }
+
+#chat{
+  width: 80%;
+  background: #e1dede;
+  border-radius: 15px;
+  padding: 10px;
+  margin-top: 10px;
+}

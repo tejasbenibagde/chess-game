@@ -18,6 +18,7 @@ function handleConnection(socket, io) {
   }
 
   socket.on("move", (move) => handleMove(socket, move, io));
+  socket.on("chatMessage", (message) => handleChatMessage(socket, message, io)); // Handle chat messages
   socket.on("disconnect", () => handleDisconnection(socket, io));
 }
 
@@ -31,6 +32,13 @@ function handleMove(socket, move, io) {
     socket.to(roomName).emit("move", move);
   } else {
     console.log("No room found for move:", move);
+  }
+}
+
+function handleChatMessage(socket, message, io) {
+  const roomName = findRoomBySocketId(socket.id);
+  if (roomName) {
+    io.to(roomName).emit("chatMessage", message);
   }
 }
 
