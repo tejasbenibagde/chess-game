@@ -1,0 +1,193 @@
+**********************
+
+
+
+server.js
+
+
+
+
+
+
+
+
+*************************
+
+
+
+// server.js
+const express = require("express");
+const http = require("http");
+const { Server } = require("socket.io");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "http://localhost:5173",
+    methods: ["GET", "POST"],
+  },
+});
+
+app.use(express.static("public"));
+
+let currentPlayer = "white"; // Initialize with white player
+
+io.on("connection", (socket) => {
+  console.log("a user connected");
+
+  socket.emit("currentPlayer", currentPlayer); // Send current player to newly connected client
+
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+  });
+
+  socket.on("move", (move) => {
+    console.log("Move received:", move); // Log received move
+    // Check if it's the current player's turn
+    if (currentPlayer === socket.currentPlayer) {
+      console.log("Player is allowed to move.");
+      // Broadcast the move to all clients
+      io.emit("move", move);
+
+      // Toggle player turn
+      currentPlayer = currentPlayer === "white" ? "black" : "white";
+    } else {
+      console.log("Player is not allowed to move.");
+    }
+  });
+});
+
+server.listen(3000, () => {
+  console.log("listening on *:3000");
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+***************************************************
+
+
+
+
+
+
+
+main.js
+
+
+
+
+
+
+
+
+*************************************
+
+
+
+
+// main.js
+import { Chess } from "chess.js";
+import io from "socket.io-client";
+
+let board = null;
+const game = new Chess();
+const socket = io("http://localhost:3000");
+
+let currentPlayer = ""; // Variable to store current player
+
+socket.on("currentPlayer", (player) => {
+  currentPlayer = player;
+  console.log("Current player:", currentPlayer);
+});
+
+function onDragStart(source, piece) {
+  console.log("drag start");
+  if (game.isGameOver() || piece.search(currentPlayer) === -1) return false;
+
+  return true;
+}
+
+function onDrop(source, target) {
+  console.log("drop start");
+  if (source === target || currentPlayer !== "white") return "snapback"; // Reject moves that didn't change the position or when it's not white's turn
+  console.log("drop end");
+
+  const move = game.move({
+    from: source,
+    to: target,
+    promotion: "q",
+  });
+
+  if (move === null) return "snapback"; // Reject invalid moves
+
+  console.log("Move made:", move); // Log the move made by the player
+  socket.emit("move", move);
+  return "snap";
+}
+
+function onSnapEnd() {
+  board.position(game.fen());
+}
+
+function updateStatus() {
+  let status = "";
+  let moveColor = "White";
+  if (game.turn() === "b") {
+    moveColor = "Black";
+  }
+
+  if (game.isCheckmate()) {
+    status = "Game over, " + moveColor + " is in checkmate.";
+  } else if (game.isDraw()) {
+    status = "Game over, drawn position";
+  } else {
+    status = moveColor + " to move";
+    if (game.inCheck()) {
+      status += ", " + moveColor + " is in check";
+    }
+  }
+
+  console.log(status);
+}
+
+socket.on("move", (move) => {
+  console.log("Move received:", move); // Log received move
+  game.move(move);
+  board.position(game.fen());
+  updateStatus();
+});
+
+const config = {
+  draggable: true,
+  position: "start",
+  pieceTheme: "/pieces/{piece}.png",
+  onDragStart: onDragStart,
+  onDrop: onDrop,
+  onSnapEnd: onSnapEnd,
+};
+
+board = Chessboard("board", config);
