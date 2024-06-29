@@ -96,3 +96,7 @@ By following this roadmap, you can systematically build and improve your chess p
 
 
 
+Pushing Code: 
+git add .
+git commit -m "Describe your changes here"
+git push origin v.1.1
