@@ -1,3 +1,5 @@
+//main.ts
+
 import { Chess } from "chess.js";
 import { io } from "socket.io-client";
 import $ from "jquery";

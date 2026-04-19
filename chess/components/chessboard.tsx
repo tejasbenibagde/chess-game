@@ -1,3 +1,5 @@
+// components/chessboard.tsx
+
 import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
 import { useState } from "react";
 import { Chess, Square } from "chess.js";

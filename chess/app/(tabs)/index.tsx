@@ -1,98 +1,181 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, TextInput } from 'react-native';
+import { useState, useEffect } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { io } from 'socket.io-client';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const router = useRouter();
+  const [isSearching, setIsSearching] = useState(false);
+  const [roomId, setRoomId] = useState('');
+  const [playerName, setPlayerName] = useState('');
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+  // Reset searching state when screen comes into focus
+  useFocusEffect(
+    () => {
+      // Reset when returning to this screen
+      setIsSearching(false);
+    }
+  );
+
+  const handleQuickPlay = async () => {
+    setIsSearching(true);
+    // Generate a random room ID for quick play
+    const newRoomId = Math.random().toString(36).substring(7);
+    router.push(`/game/${newRoomId}`);
+  };
+
+  const handleJoinWithCode = () => {
+    Alert.prompt('Enter Room Code', 'Enter the room code to join', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Join', 
+        onPress: (code: any) => {
+          if (code) router.push(`/game/${code}`);
+        }
+      }
+    ]);
+  };
+
+  const handlePlayComputer = () => {
+    router.push('/game/computer');
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Chess Master</Text>
+      
+      <View style={styles.statsCard}>
+        <Text style={styles.statsTitle}>Your Stats</Text>
+        <View style={styles.statsRow}>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>124</Text>
+            <Text style={styles.statLabel}>Rating</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>45</Text>
+            <Text style={styles.statLabel}>Wins</Text>
+          </View>
+          <View style={styles.stat}>
+            <Text style={styles.statValue}>12</Text>
+            <Text style={styles.statLabel}>Losses</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.buttonGroup}>
+        <TouchableOpacity 
+          style={[styles.button, styles.primaryButton]} 
+          onPress={handleQuickPlay}
+          disabled={isSearching}
+        >
+          <Text style={styles.buttonText}>{isSearching ? 'Searching...' : 'Quick Play'}</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.secondaryButton]} 
+          onPress={handleJoinWithCode}
+        >
+          <Text style={styles.buttonText}>Join with Code</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.outlineButton]} 
+          onPress={handlePlayComputer}
+        >
+          <Text style={styles.outlineButtonText}>Play vs Computer</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.infoCard}>
+        <Text style={styles.infoTitle}>Recent Games</Text>
+        <Text style={styles.infoText}>No recent games</Text>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    padding: 20,
+    backgroundColor: '#fff',
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 30,
+    marginTop: 20,
+  },
+  statsCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 15,
+    marginBottom: 20,
+  },
+  statsTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  statsRow: {
     flexDirection: 'row',
+    justifyContent: 'space-around',
+  },
+  stat: {
     alignItems: 'center',
-    gap: 8,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  statValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  statLabel: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+  },
+  buttonGroup: {
+    gap: 12,
+    marginBottom: 20,
+  },
+  button: {
+    padding: 15,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  primaryButton: {
+    backgroundColor: '#4CAF50',
+  },
+  secondaryButton: {
+    backgroundColor: '#2196F3',
+  },
+  outlineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  outlineButtonText: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  infoCard: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 12,
+    padding: 15,
+  },
+  infoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  infoText: {
+    color: '#666',
+    textAlign: 'center',
+    padding: 20,
   },
 });
