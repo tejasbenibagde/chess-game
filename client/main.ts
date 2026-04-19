@@ -1,7 +1,8 @@
 import { Chess } from "chess.js";
 import { io } from "socket.io-client";
-
-let board = null;
+import $ from "jquery";
+declare const Chessboard: any;
+let board: any = null;
 const game = new Chess();
 let currentPlayer = "";
 const $status = $("#status");
@@ -13,17 +14,21 @@ const socket = io("http://localhost:3000");
 // Override addEventListener to always set passive to false
 (function () {
   const originalAddEventListener = EventTarget.prototype.addEventListener;
-  EventTarget.prototype.addEventListener = function (type, listener, options) {
+  EventTarget.prototype.addEventListener = function (
+    type,
+    listener,
+    options?: boolean | AddEventListenerOptions
+  ) {
     if (typeof options === "object") {
       options.passive = false;
     } else {
-      options = { capture: options, passive: false };
+      options = { capture: options ?? false, passive: false };
     }
     originalAddEventListener.call(this, type, listener, options);
   };
 })();
 
-function onDragStart(source, piece, position, orientation) {
+function onDragStart(source: string, piece: string, position: any, orientation: string) {
   if (game.isGameOver()) return false;
 
   if (
@@ -34,18 +39,18 @@ function onDragStart(source, piece, position, orientation) {
   }
 }
 
-function onDrop(source, target) {
+function onDrop(source: string, target: string) {
   try {
     const move = game.move({
       from: source,
       to: target,
       promotion: "q",
     });
-  
+
     if (move === null) return "snapback";
-  
+
     socket.emit("move", move);
-  
+
     updateStatus();
   } catch (error) {
     return "snapback";
@@ -80,7 +85,7 @@ function onSnapEnd() {
 
 socket.on("userrole", function ({ role }) {
   currentPlayer = role;
-  const playerRole = document.querySelector("#role");
+  const playerRole = document.querySelector("#role") as HTMLElement;
   playerRole.innerHTML = role;
 
   const config = {
@@ -102,7 +107,7 @@ socket.on("userrole", function ({ role }) {
 });
 
 socket.on("waitingForOpponent", ({ message }) => {
-  const playerRole = document.querySelector("#role");
+  const playerRole = document.querySelector("#role") as HTMLElement;
   playerRole.innerHTML = message;
 });
 
@@ -113,8 +118,8 @@ socket.on("move", (move) => {
 });
 
 // Chat feature
-document.getElementById("sendButton").addEventListener("click", () => {
-  const chatInput = document.getElementById("chatInput");
+document.getElementById("sendButton")!.addEventListener("click", () => {
+  const chatInput = document.getElementById("chatInput") as HTMLInputElement;
   const message = chatInput.value;
   if (message) {
     socket.emit("chatMessage", message);
@@ -123,7 +128,7 @@ document.getElementById("sendButton").addEventListener("click", () => {
 });
 
 socket.on("chatMessage", (message) => {
-  const chatMessages = document.getElementById("chatMessages");
+  const chatMessages = document.getElementById("chatMessages")!;
   const messageElement = document.createElement("div");
   messageElement.textContent = message;
   chatMessages.appendChild(messageElement);
