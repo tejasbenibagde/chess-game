@@ -6,7 +6,7 @@ export default function GameLayout() {
       <Stack.Screen 
         name="[roomId]" 
         options={{ 
-          headerShown: true,
+          headerShown: false,
           title: 'Chess Game',
           headerBackTitle: 'Back'
         }} 
@@ -14,7 +14,7 @@ export default function GameLayout() {
       <Stack.Screen 
         name="computer" 
         options={{ 
-          headerShown: true,
+          headerShown: false,
           title: 'vs Computer'
         }} 
       />
