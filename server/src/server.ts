@@ -8,6 +8,7 @@ import type { ClientToServerEvents, ServerToClientEvents } from "./types/types";
 
 // Basic setup
 const app = express();
+const PORT = process.env.PORT || 3000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
@@ -24,6 +25,6 @@ app.use(express.static("public"));
 
 io.on("connection", (socket) => handleConnection(socket, io));
 
-server.listen(3000, () => {
-  console.log("Listening on *:3000");
+server.listen(PORT, () => {
+  console.log(`Listening on port ${PORT}`);
 });
