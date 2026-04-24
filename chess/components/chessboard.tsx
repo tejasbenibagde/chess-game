@@ -1,98 +1,151 @@
-// components/chessboard.tsx
+import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { useState, useMemo } from 'react';
+import { cn } from '@/lib/utils';
 
-import { View, TouchableOpacity, Image, StyleSheet } from "react-native";
-import { useState } from "react";
-import { Chess, Square } from "chess.js";
+const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
+const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
 
-type Props = {
-  game: Chess;
-  role: "w" | "b";
+const pieceImages = {
+  bK: require('@/assets/pieces/type2/bK.png'),
+  bQ: require('@/assets/pieces/type2/bQ.png'),
+  bR: require('@/assets/pieces/type2/bR.png'),
+  bB: require('@/assets/pieces/type2/bB.png'),
+  bN: require('@/assets/pieces/type2/bN.png'),
+  bP: require('@/assets/pieces/type2/bP.png'),
+  wK: require('@/assets/pieces/type2/wK.png'),
+  wQ: require('@/assets/pieces/type2/wQ.png'),
+  wR: require('@/assets/pieces/type2/wR.png'),
+  wB: require('@/assets/pieces/type2/wB.png'),
+  wN: require('@/assets/pieces/type2/wN.png'),
+  wP: require('@/assets/pieces/type2/wP.png'),
+};
+
+interface ChessBoardProps {
+  game: any;
+  role: 'w' | 'b';
   onMove: (move: { from: string; to: string; promotion?: string }) => void;
-};
+  boardSize: number;
+}
 
-const baseFiles = ["a", "b", "c", "d", "e", "f", "g", "h"];
-const baseRanks = ["8", "7", "6", "5", "4", "3", "2", "1"];
-
-const pieceMap: Record<string, any> = {
-  p: require("../assets/pieces/bP.png"),
-  r: require("../assets/pieces/bR.png"),
-  n: require("../assets/pieces/bN.png"),
-  b: require("../assets/pieces/bB.png"),
-  q: require("../assets/pieces/bQ.png"),
-  k: require("../assets/pieces/bK.png"),
-  P: require("../assets/pieces/wP.png"),
-  R: require("../assets/pieces/wR.png"),
-  N: require("../assets/pieces/wN.png"),
-  B: require("../assets/pieces/wB.png"),
-  Q: require("../assets/pieces/wQ.png"),
-  K: require("../assets/pieces/wK.png"),
-};
-
-export default function ChessBoard({ game, role, onMove }: Props) {
-  const [selected, setSelected] = useState<string | null>(null);
-
+export function ChessBoard({ game, role, onMove, boardSize }: ChessBoardProps) {
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null);
+  const [validMoves, setValidMoves] = useState<string[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  
   const board = game.board();
+  
+  const displayFiles = role === 'w' ? files : [...files].reverse();
+  const displayRanks = role === 'w' ? ranks : [...ranks].reverse();
 
-  // Flip only UI, NOT underlying data
-  const displayFiles = role === "w" ? baseFiles : [...baseFiles].reverse();
-  const displayRanks = role === "w" ? baseRanks : [...baseRanks].reverse();
+  const getPieceImageSource = (piece: any) => {
+    if (!piece) return null;
+    const key = `${piece.color === 'w' ? 'w' : 'b'}${piece.type.toUpperCase()}` as keyof typeof pieceImages;
+    return pieceImages[key];
+  };
 
-  const handlePress = (square: Square) => {
+  // Calculate valid moves for selected piece
+  const calculateValidMoves = (square: string) => {
+    try {
+      const moves = game.moves({
+        verbose: true,
+        square: square,
+      });
+      return moves.map((move: any) => move.to);
+    } catch (e) {
+      console.log('Error calculating moves:', e);
+      return [];
+    }
+  };
+
+  const handleSquarePress = (square: string) => {
     const piece = game.get(square);
-
-    // ❌ Not your turn → ignore
+    
+    // Not your turn
     if (game.turn() !== role) return;
-
-    // FIRST CLICK → select piece
-    if (!selected) {
-      if (!piece || piece.color !== role) return;
-      setSelected(square);
+    
+    // No piece selected yet
+    if (!selectedSquare) {
+      // Select a piece (must be your own piece)
+      if (piece && piece.color === role) {
+        setSelectedSquare(square);
+        setValidMoves(calculateValidMoves(square));
+        setErrorMessage(null);
+      }
       return;
     }
+    
+    // Attempt to make a move
+    const isValidMove = validMoves.includes(square);
+    
+    if (isValidMove) {
+      onMove({ from: selectedSquare, to: square, promotion: 'q' });
+      setSelectedSquare(null);
+      setValidMoves([]);
+      setErrorMessage(null);
+    } else {
+      // Invalid move - show feedback and clear selection
+      setErrorMessage('Invalid move!');
+      setSelectedSquare(null);
+      setValidMoves([]);
+      
+      // Clear error message after 2 seconds
+      setTimeout(() => setErrorMessage(null), 2000);
+    }
+  };
 
-    // SECOND CLICK → attempt move
-    onMove({
-      from: selected,
-      to: square,
-      promotion: "q",
-    });
+  const isHighlightedSquare = (square: string) => {
+    return selectedSquare === square;
+  };
 
-    setSelected(null);
+  const isValidMoveSquare = (square: string) => {
+    return validMoves.includes(square);
   };
 
   return (
-    <View style={styles.board}>
+    <View style={{ width: boardSize, height: boardSize }} className="flex-row flex-wrap relative">
+      {/* Error toast */}
+      {errorMessage && (
+        <View className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 bg-red-500 px-4 py-2 rounded-full">
+          <Text className="text-white font-semibold text-sm">{errorMessage}</Text>
+        </View>
+      )}
+      
       {displayRanks.map((rank, rIdx) =>
         displayFiles.map((file, fIdx) => {
-          const square = (file + rank) as Square;
-
-          // ✅ Correct indexing (always from original board)
-          const realRankIndex = baseRanks.indexOf(rank);
-          const realFileIndex = baseFiles.indexOf(file);
-
-          const piece = board[realRankIndex][realFileIndex];
+          const square = file + rank;
+          const realRankIndex = ranks.indexOf(rank);
+          const realFileIndex = files.indexOf(file);
+          const piece = board[realRankIndex]?.[realFileIndex];
           const isDark = (rIdx + fIdx) % 2 === 1;
-
+          const isSelected = isHighlightedSquare(square);
+          const isValidMove = isValidMoveSquare(square);
+          const pieceImage = piece ? getPieceImageSource(piece) : null;
+          
           return (
             <TouchableOpacity
               key={square}
-              style={[
-                styles.square,
-                { backgroundColor: isDark ? "#769656" : "#eeeed2" },
-                selected === square && styles.selected,
-              ]}
-              onPress={() => handlePress(square)}
+              className={cn(
+                "w-[12.5%] h-[12.5%] justify-center items-center",
+                isDark ? "bg-[#769656]" : "bg-[#eeeed2]",
+                isSelected && "border-4 border-yellow-400 rounded-sm",
+                isValidMove && "relative"
+              )}
+              onPress={() => handleSquarePress(square)}
             >
-              {piece && (
-                <Image
-                  source={
-                    pieceMap[
-                      piece.color === "w"
-                        ? piece.type.toUpperCase()
-                        : piece.type
-                    ]
-                  }
-                  style={styles.piece}
+              {/* Valid move indicator */}
+              {isValidMove && (
+                <View className={cn(
+                  "absolute w-6 h-6 rounded-full",
+                  piece ? "bg-red-500/50" : "bg-green-500/30"
+                )} />
+              )}
+              
+              {/* Chess piece */}
+              {pieceImage && (
+                <Image 
+                  source={pieceImage} 
+                  className="w-4/5 h-4/5"
+                  resizeMode="contain"
                 />
               )}
             </TouchableOpacity>
@@ -102,27 +155,3 @@ export default function ChessBoard({ game, role, onMove }: Props) {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  board: {
-    width: "100%",
-    aspectRatio: 1, 
-    flexDirection: "row",
-    flexWrap: "wrap",
-  },
-  square: {
-    width: "12.5%",
-    height: "12.5%",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  piece: {
-    width: "80%",
-    height: "80%",
-    resizeMode: "contain",
-  },
-  selected: {
-    borderWidth: 2,
-    borderColor: "red",
-  },
-});

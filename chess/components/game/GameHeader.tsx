@@ -1,4 +1,5 @@
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native'; // Added Text
+import { View, Text, TouchableOpacity } from 'react-native';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface GameHeaderProps {
   role: 'w' | 'b';
@@ -9,91 +10,52 @@ interface GameHeaderProps {
 }
 
 export function GameHeader({ role, playerName, unreadCount, onChatPress, onExitPress }: GameHeaderProps) {
+  const { colors } = useAppTheme();
+
   return (
-    <View style={styles.header}>
+    <View
+      className="flex-row justify-between items-center px-5 pt-3 pb-2"
+      style={{ backgroundColor: colors.background }}
+    >
       <View>
-        <Text style={styles.roleText}>♔ {role === 'w' ? 'White' : 'Black'} ♚</Text>
-        <Text style={styles.playerNameText}>{playerName}</Text>
+        <Text className="text-lg font-bold" style={{ color: colors.foreground }}>
+          ♔ {role === 'w' ? 'White' : 'Black'} ♚
+        </Text>
+        <Text className="text-xs mt-1" style={{ color: colors.mutedForeground }}>
+          {playerName}
+        </Text>
       </View>
-      <View style={styles.headerButtons}>
-        <TouchableOpacity onPress={onChatPress} style={styles.chatButton}>
-          <Text style={styles.chatButtonText}>💬</Text>
+
+      <View className="flex-row space-x-2">
+        <TouchableOpacity
+          onPress={onChatPress}
+          className="w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: colors.primary }}
+        >
+          <Text className="text-xl" style={{ color: colors.primaryForeground }}>
+            💬
+          </Text>
           {unreadCount > 0 && (
-            <View style={styles.unreadBadge}>
-              <Text style={styles.unreadText}>{unreadCount}</Text>
+            <View
+              className="absolute top-0 right-0 rounded-full px-2 h-5 items-center justify-center"
+              style={{ backgroundColor: colors.destructive }}
+            >
+              <Text className="text-[11px] font-bold" style={{ color: colors.primaryForeground }}>
+                {unreadCount}
+              </Text>
             </View>
           )}
         </TouchableOpacity>
-        <TouchableOpacity onPress={onExitPress} style={styles.exitButton}>
-          <Text style={styles.exitButtonText}>✕</Text>
+        <TouchableOpacity
+          onPress={onExitPress}
+          className="w-10 h-10 rounded-full items-center justify-center"
+          style={{ backgroundColor: colors.destructive }}
+        >
+          <Text className="text-xl font-semibold" style={{ color: colors.primaryForeground }}>
+            ✕
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  roleText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  playerNameText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  chatButton: {
-    backgroundColor: '#4CAF50',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  chatButtonText: {
-    fontSize: 20,
-  },
-  unreadBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#f44336',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  unreadText: {
-    color: '#fff',
-    fontSize: 11,
-    fontWeight: 'bold',
-  },
-  exitButton: {
-    backgroundColor: '#f44336',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  exitButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

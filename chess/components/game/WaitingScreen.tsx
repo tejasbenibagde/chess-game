@@ -1,4 +1,5 @@
-import { View, Text, ActivityIndicator, StyleSheet } from 'react-native'; // Added Text
+import { View, Text, ActivityIndicator } from 'react-native';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 interface WaitingScreenProps {
   roomId: string;
@@ -7,45 +8,26 @@ interface WaitingScreenProps {
 }
 
 export function WaitingScreen({ roomId, playerName, status }: WaitingScreenProps) {
+  const { colors } = useAppTheme();
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.waitingText}>♜ Waiting for opponent... ♞</Text>
-      <Text style={styles.roomCode}>Room Code: {roomId}</Text>
-      <ActivityIndicator size="large" color="#4CAF50" />
-      <Text style={styles.status}>{status || 'Share this code with your friend to play!'}</Text>
-      <Text style={styles.playerName}>Playing as: {playerName}</Text>
+    <View
+      className="flex-1 justify-center items-center p-6"
+      style={{ backgroundColor: colors.background }}
+    >
+      <Text className="text-2xl font-bold mb-2" style={{ color: colors.foreground }}>
+        ♜ Waiting for opponent... ♞
+      </Text>
+      <Text className="text-lg font-semibold mb-5" style={{ color: colors.primary }}>
+        Room Code: {roomId}
+      </Text>
+      <ActivityIndicator size="large" color={colors.primary} />
+      <Text className="text-sm text-center mt-5" style={{ color: colors.mutedForeground }}>
+        {status || 'Waiting for opponent...'}
+      </Text>
+      <Text className="text-sm mt-3 font-medium" style={{ color: colors.foreground }}>
+        Playing as: {playerName}
+      </Text>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
-  },
-  waitingText: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 10,
-  },
-  roomCode: {
-    fontSize: 18,
-    color: '#4CAF50',
-    fontWeight: '600',
-    marginBottom: 20,
-  },
-  status: {
-    fontSize: 14,
-    textAlign: 'center',
-    marginTop: 20,
-    color: '#666',
-  },
-  playerName: {
-    fontSize: 14,
-    marginTop: 10,
-    fontWeight: '500',
-  },
-});

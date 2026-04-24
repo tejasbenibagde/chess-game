@@ -1,5 +1,7 @@
-import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, StyleSheet, Dimensions } from 'react-native';
-import { forwardRef } from 'react';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, Modal, Animated, Dimensions, KeyboardAvoidingView, Platform } from 'react-native';
+import { forwardRef, useState } from 'react';
+import { cn } from '@/lib/utils';
+import { useAppTheme } from '@/hooks/use-app-theme';
 
 const { height } = Dimensions.get('window');
 
@@ -22,139 +24,137 @@ export const ChatDrawer = forwardRef<ScrollView, ChatDrawerProps>(({
   onClose,
   slideAnim,
 }, ref) => {
+  const [isTyping, setIsTyping] = useState(false);
+  const { colors } = useAppTheme();
+
   return (
     <Modal transparent visible={visible} animationType="none">
-      <TouchableOpacity style={styles.overlay} onPress={onClose} activeOpacity={1}>
-        <Animated.View style={[styles.drawer, { transform: [{ translateY: slideAnim }] }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>💬 Chat</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeText}>▼</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <ScrollView 
-            ref={ref}
-            style={styles.scrollView}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {messages.length === 0 ? (
-              <View style={styles.emptyChat}>
-                <Text style={styles.emptyText}>No messages yet</Text>
-                <Text style={styles.emptySubtext}>Say hello to your opponent!</Text>
-              </View>
-            ) : (
-              messages.map((msg, i) => (
-                <View key={i} style={styles.messageBubble}>
-                  <Text style={styles.messageText}>{msg}</Text>
+      {/* Background overlay - closes when tapping outside */}
+      <View className="flex-1 bg-black/50 justify-end">
+        {/* Clickable area outside the drawer */}
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={onClose}
+          className="flex-1"
+        />
+        
+        {/* Drawer content - prevents touch from bubbling up */}
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          className="justify-end"
+        >
+          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
+            <Animated.View 
+              style={[{ transform: [{ translateY: slideAnim }] }, { backgroundColor: colors.background }]}
+              className="rounded-t-2xl"
+            >
+              {/* Header */}
+              <View className="flex-row justify-between items-center p-4"
+                style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+              >
+                <View className="flex-row items-center gap-2">
+                  <Text className="text-2xl">💬</Text>
+                  <Text className="text-lg font-semibold">Chat</Text>
+                  {messages.length > 0 && (
+                    <View className="bg-green-100 px-2 py-0.5 rounded-full">
+                      <Text className="text-green-700 text-xs font-medium">{messages.length}</Text>
+                    </View>
+                  )}
                 </View>
-              ))
-            )}
-          </ScrollView>
-          
-          <View style={styles.inputWrapper}>
-            <TextInput
-              style={styles.input}
-              placeholder="Type a message..."
-              value={messageText}
-              onChangeText={onMessageChange}
-              onSubmitEditing={onSend}
-              returnKeyType="send"
-            />
-            <TouchableOpacity style={styles.sendButton} onPress={onSend}>
-              <Text style={styles.sendText}>Send</Text>
-            </TouchableOpacity>
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
+                <TouchableOpacity 
+                  onPress={onClose} 
+                  className="w-8 h-8 rounded-full bg-gray-100 items-center justify-center"
+                >
+                  <Text className="text-gray-600 text-lg">▼</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Messages Area */}
+              <View className="h-96">
+                <ScrollView 
+                  ref={ref}
+                  className="flex-1"
+                  contentContainerStyle={{ paddingHorizontal: 16, paddingVertical: 12 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {messages.length === 0 ? (
+                    <View className="items-center justify-center h-80">
+                      <Text className="text-5xl mb-3">💭</Text>
+                      <Text className="text-gray-400 text-base">No messages yet</Text>
+                      <Text className="text-gray-300 text-sm mt-1">Say hello to your opponent!</Text>
+                    </View>
+                  ) : (
+                    messages.map((msg, i) => {
+                      const isOwnMessage = msg.startsWith('You:');
+                      return (
+                        <View 
+                          key={i} 
+                          className={cn(
+                            "max-w-[80%] rounded-lg p-3 mb-2 self-start",
+                            isOwnMessage ? 'self-end rounded-br-none' : 'self-start rounded-bl-none'
+                          )}
+                          style={{ backgroundColor: isOwnMessage ? colors.primary : colors.muted }}
+                        >
+                          <Text className="text-sm" style={{ color: isOwnMessage ? colors.primaryForeground : colors.foreground }}>
+                            {msg}
+                          </Text>
+                        </View>
+                      );
+                    })
+                  )}
+                  {/* Typing indicator */}
+                  {isTyping && (
+                    <View className="bg-gray-100 rounded-lg p-2 self-start max-w-[30%]">
+                      <Text className="text-gray-500 text-xs">typing...</Text>
+                    </View>
+                  )}
+                </ScrollView>
+              </View>
+              
+              {/* Input Area */}
+              <View className="p-3 border-t">
+                <View className="flex-row gap-2 items-center">
+                  <View className="flex-1">
+                    <TextInput
+                      className="border rounded-full px-4 py-2.5 text-base"
+                      style={{ backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }}
+                      placeholder="Type a message..."
+                      placeholderTextColor={colors.mutedForeground}
+                      value={messageText}
+                      onChangeText={(text) => {
+                        onMessageChange(text);
+                        setIsTyping(text.length > 0);
+                        // Reset typing indicator after 1.5 seconds of no input
+                        setTimeout(() => {
+                          if (text.length === 0) setIsTyping(false);
+                        }, 1500);
+                      }}
+                      onSubmitEditing={onSend}
+                      returnKeyType="send"
+                      maxLength={200}
+                    />
+                  </View>
+                  <TouchableOpacity 
+                    className={cn(
+                      "px-5 py-2.5 rounded-full",
+                      messageText.trim() ? "bg-green-600" : "bg-gray-300"
+                    )}
+                    onPress={onSend}
+                    disabled={!messageText.trim()}
+                  >
+                    <Text className={cn(
+                      "font-semibold",
+                      messageText.trim() ? "text-white" : "text-gray-500"
+                    )}>
+                      Send
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </Animated.View>
+          </TouchableOpacity>
+        </KeyboardAvoidingView>
+      </View>
     </Modal>
   );
-});
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  drawer: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    height: height * 0.6,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  closeButton: {
-    padding: 8,
-  },
-  closeText: {
-    fontSize: 20,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: 12,
-  },
-  emptyChat: {
-    alignItems: 'center',
-    paddingVertical: 30,
-  },
-  emptyText: {
-    color: '#999',
-    fontSize: 14,
-  },
-  emptySubtext: {
-    color: '#bbb',
-    fontSize: 12,
-    marginTop: 5,
-  },
-  messageBubble: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 8,
-    marginBottom: 8,
-  },
-  messageText: {
-    fontSize: 13,
-    color: '#333',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    padding: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    gap: 8,
-  },
-  input: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    fontSize: 14,
-  },
-  sendButton: {
-    backgroundColor: '#4CAF50',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    borderRadius: 20,
-    justifyContent: 'center',
-  },
-  sendText: {
-    color: '#fff',
-    fontWeight: '600',
-  },
 });

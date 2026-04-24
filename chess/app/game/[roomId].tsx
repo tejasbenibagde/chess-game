@@ -1,13 +1,13 @@
-import { View, Text, StyleSheet, Dimensions, Animated, ScrollView } from 'react-native'; // Added ScrollView and Text
-import { useState, useRef } from 'react';
+import { View, Text, Dimensions, Animated, ScrollView } from 'react-native';
+import { useState, useRef, useEffect } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Chess } from 'chess.js';
 import { ChessBoard } from '@/components/game/ChessBoard';
 import { ChatDrawer } from '@/components/game/ChatDrawer';
 import { GameOverModal } from '@/components/game/GameOverModal';
 import { GameHeader } from '@/components/game/GameHeader';
-import { JoinScreen } from '@/components/game/JoinScreen';
 import { WaitingScreen } from '@/components/game/WaitingScreen';
+import { useAppTheme } from '@/hooks/use-app-theme';
 import { useGameSocket } from '@/hooks/useGameSocket';
 
 const { width, height } = Dimensions.get('window');
@@ -16,27 +16,43 @@ const boardSize = Math.min(width - 40, 380);
 export default function GameScreen() {
   const { roomId } = useLocalSearchParams<{ roomId: string }>();
   const [game] = useState(() => new Chess());
-  const [playerName, setPlayerName] = useState('');
-  const [isJoining, setIsJoining] = useState(false);
-  const [boardKey, setBoardKey] = useState(0);
+  const [playerName] = useState('Player');
+  const [hasJoined, setHasJoined] = useState(false);
   const [chatVisible, setChatVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [chatMessages, setChatMessages] = useState<string[]>([]);
   const [messageText, setMessageText] = useState('');
   const [showGameOver, setShowGameOver] = useState(false);
   const [gameResult, setGameResult] = useState('');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const scrollViewRef = useRef<ScrollView>(null);
   const slideAnim = useRef(new Animated.Value(height)).current;
+
+  // Force a re-render when game state changes
+  const [, forceUpdate] = useState({});
+
+  const refreshBoard = () => {
+    forceUpdate({});
+    updateGameStatus();
+  };
+
+  const showError = (message: string) => {
+    setErrorMessage(message);
+    setTimeout(() => setErrorMessage(null), 2000);
+  };
 
   const handleMove = (move: any) => {
     try {
       const result = game.move(move);
       if (result) {
-        setBoardKey(prev => prev + 1);
-        updateGameStatus();
+        refreshBoard();
+      } else {
+        showError('Invalid move attempted');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.log('Invalid move:', e);
+      showError(e.message || 'Invalid move!');
+      // Don't refresh board on error
     }
   };
 
@@ -46,11 +62,21 @@ export default function GameScreen() {
     setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
-  const { role, gameStarted, status, setStatus, joinGame, sendMove, sendChat } = useGameSocket(
+  const { socket, role, gameStarted, status, setStatus, joinGame, sendMove, sendChat } = useGameSocket(
     roomId,
     handleMove,
     handleChat
   );
+
+  const { colors } = useAppTheme();
+
+  useEffect(() => {
+    if (socket && !hasJoined) {
+      if (joinGame(playerName)) {
+        setHasJoined(true);
+      }
+    }
+  }, [socket, hasJoined, joinGame, playerName]);
 
   const updateGameStatus = () => {
     if (game.isCheckmate()) {
@@ -67,11 +93,17 @@ export default function GameScreen() {
   };
 
   const onMove = (move: any) => {
-    const result = game.move(move);
-    if (result) {
-      sendMove(result);
-      setBoardKey(prev => prev + 1);
-      updateGameStatus();
+    try {
+      const result = game.move(move);
+      if (result) {
+        sendMove(result);
+        refreshBoard();
+      } else {
+        showError('Invalid move!');
+      }
+    } catch (e: any) {
+      console.log('Invalid move error:', e);
+      showError(e.message || 'Cannot move there!');
     }
   };
 
@@ -95,11 +127,8 @@ export default function GameScreen() {
       .start(() => setChatVisible(false));
   };
 
-  const handleJoin = () => {
-    if (joinGame(playerName)) setIsJoining(true);
-  };
-
   const handleExit = () => {
+    setShowGameOver(false);
     game.reset();
     router.back();
   };
@@ -107,22 +136,17 @@ export default function GameScreen() {
   const handleRematch = () => {
     setShowGameOver(false);
     game.reset();
-    setBoardKey(prev => prev + 1);
+    refreshBoard();
     router.replace(`/game/${roomId}`);
   };
 
   // Screen states
-  if (!isJoining && !gameStarted) {
-    return <JoinScreen roomId={roomId} playerName={playerName} onPlayerNameChange={setPlayerName} onJoin={handleJoin} />;
-  }
-
   if (!gameStarted) {
     return <WaitingScreen roomId={roomId} playerName={playerName} status={status} />;
   }
 
-  // Main game screen
   return (
-    <View style={styles.container}>
+    <View style={{ backgroundColor: colors.background }} className="flex-1">
       <GameHeader
         role={role}
         playerName={playerName}
@@ -131,13 +155,30 @@ export default function GameScreen() {
         onExitPress={handleExit}
       />
 
-      <View style={styles.boardContainer}>
-        <ChessBoard key={boardKey} game={game} role={role} onMove={onMove} boardSize={boardSize} />
+      <View className="items-center my-2.5">
+        <ChessBoard 
+          game={game} 
+          role={role} 
+          onMove={onMove} 
+          boardSize={boardSize} 
+        />
       </View>
 
-      <View style={styles.statusCard}>
-        <Text style={styles.statusText}>{status}</Text>
+      <View
+        className="rounded-lg p-3 mx-5 my-2.5"
+        style={{ backgroundColor: colors.muted }}
+      >
+        <Text className="text-sm text-center font-medium" style={{ color: colors.foreground }}>
+          {status}
+        </Text>
       </View>
+
+      {/* Global error message */}
+      {errorMessage && (
+        <View className="absolute bottom-20 left-5 right-5 bg-red-500 rounded-lg p-3">
+          <Text className="text-white text-center font-medium">{errorMessage}</Text>
+        </View>
+      )}
 
       <ChatDrawer
         ref={scrollViewRef}
@@ -154,26 +195,3 @@ export default function GameScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  boardContainer: {
-    alignItems: 'center',
-    marginVertical: 10,
-  },
-  statusCard: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    padding: 12,
-    marginHorizontal: 20,
-    marginVertical: 10,
-  },
-  statusText: {
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-});
