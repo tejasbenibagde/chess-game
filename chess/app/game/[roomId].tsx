@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Dimensions, Animated, ScrollView } from 'react-native'; // Added ScrollView and Text
-import { useEffect, useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Chess } from 'chess.js';
 import { ChessBoard } from '@/components/game/ChessBoard';
