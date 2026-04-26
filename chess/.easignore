@@ -1,0 +1,17 @@
+cat > .easignore << 'EOF'
+# Ignore server folder (if accidentally copied)
+server/
+
+# Expo cache
+.expo/
+.expo/web/cache/
+
+# Node cache
+node_modules/.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+EOF
