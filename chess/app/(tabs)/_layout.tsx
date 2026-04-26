@@ -1,48 +1,52 @@
 import { Tabs } from 'expo-router';
 import { View, Text } from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAppTheme } from '@/hooks/use-app-theme';
+import { cn } from '@/lib/utils';
 
 // Simple tab bar icon component
-function TabIcon({ icon }: any) {
+function TabIcon({ icon, focused
+}: any) {
   return (
     <View className="items-center">
-      <Text className="text-2xl">{icon}</Text>
+      <Text className={cn(
+        "text-2xl",
+        focused && "scale-110 transition-transform"
+      )}>{icon}</Text>
     </View>
   );
 }
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
+  const { colors } = useAppTheme();
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: isDark ? '#1a1a1a' : '#ffffff',
+          backgroundColor: colors.background,
           borderTopWidth: 1,
-          borderTopColor: isDark ? '#333' : '#e5e5e5',
+          borderTopColor: colors.border,
           height: 60,
           paddingBottom: 8,
           paddingTop: 8,
         },
-        tabBarActiveTintColor: '#4CAF50',
-        tabBarInactiveTintColor: isDark ? '#888' : '#999',
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.mutedForeground,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: () => <TabIcon icon="🏠" />,
+          tabBarIcon: ({focused}) => <TabIcon icon="🏠" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: () => <TabIcon icon="👤" />,
+          tabBarIcon: ({focused}) => <TabIcon icon="👤" focused={focused} />,
         }}
       />
     </Tabs>

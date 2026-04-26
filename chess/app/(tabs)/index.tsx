@@ -3,10 +3,11 @@ import { useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/Button';
 import { useAppTheme } from '@/hooks/use-app-theme';
+import { cn } from '@/lib/utils';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isDark, colors } = useAppTheme();
+  const { colors } = useAppTheme();
 
   const handleQuickPlay = () => {
     const newRoomId = Math.random().toString(36).substring(7);
@@ -18,29 +19,29 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.background }} className="flex-1">
-      <ScrollView className="flex-1 px-5 pt-5">
-        {/* Header */}
-        <View className="items-center mb-8">
-          <Text className="text-5xl mb-2">♜ ♞ ♝</Text>
-          <Text style={{ color: colors.primary }} className="text-4xl font-bold text-center">
-            Chess Master
-          </Text>
-          <Text style={{ color: colors.mutedForeground }} className="text-center mt-2">
-            Play chess with friends online
-          </Text>
-        </View>
-
+    <SafeAreaView style={{ backgroundColor: colors.background }} className={cn("flex-1")}>
+      <ScrollView 
+        className="flex-1 px-5"
+        contentContainerStyle={{ 
+          flexGrow: 1,
+          justifyContent: 'center',
+          alignItems: 'center'
+        }}
+      >
         {/* Quick Play Button */}
-        <Button onPress={handleQuickPlay} size="lg" className="mb-3">
-          ⚡ Quick Play
+        <Button variant={"default"} onPress={handleQuickPlay} size="lg" className={cn("mb-6 w-full")}>
+          Quick Play
         </Button>
 
         {/* Play vs Computer */}
-        <Button variant="outline" onPress={handlePlayComputer} className="mb-6">
-          🤖 Play vs Computer
+        <Button variant={"secondary"} onPress={handlePlayComputer} className={cn("mb-6 w-full")}>
+          Play vs Computer
         </Button>
-    
+
+        {/* Puzzles */}
+        <Button variant={"secondary"} onPress={handlePlayComputer} className={cn("mb-6 w-full")}>
+          Puzzles
+        </Button>
       </ScrollView>
     </SafeAreaView>
   );
